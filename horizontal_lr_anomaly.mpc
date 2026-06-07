@@ -1,0 +1,171 @@
+from Compiler.types import sfix, sint
+from Compiler.library import for_range, print_ln, start_timer, stop_timer
+from Compiler import ml
+
+program.use_trunc_pr = True
+program.use_split(2)
+use_approx = False
+sfix.set_precision(32, 63)
+
+# Must match the preprocessing output files.
+n_features = 34
+n_samples_p0 = 800
+n_samples_p1 = 800
+total_samples = n_samples_p0 + n_samples_p1 
+learning_rate = sfix(0.005)
+epochs = 150
+decision_threshold = sfix(0.456)
+
+print_ln("----- CONFIGURATION -----")
+print_ln("Samples P0: %s", n_samples_p0)
+print_ln("Samples P1: %s", n_samples_p1)
+print_ln("Total samples: %s", total_samples)
+print_ln("Features: %s", n_features)
+print_ln("Learning rate: %s", learning_rate.reveal())
+print_ln("Epochs: %s", epochs)
+print_ln("-------------------------")
+
+X = sfix.Matrix(total_samples, n_features)
+y = sint.Array(total_samples)
+
+print_ln("Loading data...")
+
+# Input order must match the Player-Data files generated during preprocessing.
+@for_range(n_samples_p0)
+def _(i):
+    for j in range(n_features):
+        X[i][j] = sfix.get_input_from(0)
+    y[i] = sint.get_input_from(0)
+
+@for_range(n_samples_p1)
+def _(i):
+    idx = n_samples_p0 + i
+    for j in range(n_features):
+        X[idx][j] = sfix.get_input_from(1)
+    y[idx] = sint.get_input_from(1)
+
+print_ln("Data loaded.")
+
+pos = sint(0)
+
+@for_range(total_samples)
+def _(i):
+    pos.update(pos + y[i])
+
+print_ln("Total positives: %s", pos.reveal())
+print_ln("Total negatives: %s", total_samples - pos.reveal())
+
+beta = sfix.Array(n_features)
+bias = sfix(0)
+
+@for_range(n_features)
+def _(j):
+    beta[j] = sfix(0)
+
+print_ln("Training...")
+start_timer(1)
+
+# Full-batch gradient descent over all secret-shared samples.
+@for_range(epochs)
+def _(e):
+    grad = sfix.Array(n_features)
+    bias_grad = sfix(0)
+
+    @for_range(n_features)
+    def _(j):
+        grad[j] = sfix(0)
+
+    @for_range(total_samples)
+    def _(i):
+        z = bias
+        for j in range(n_features):
+            z = z + beta[j] * X[i][j]
+
+        pred = ml.sigmoid(z)
+        error = pred - sfix(y[i])
+
+        for j in range(n_features):
+            grad[j] = grad[j] + error * X[i][j]
+
+        bias_grad.update(bias_grad + error)
+
+    @for_range(n_features)
+    def _(j):
+        beta[j] = beta[j] - learning_rate * grad[j] / sfix(total_samples)
+
+    bias.update(bias - learning_rate * bias_grad / sfix(total_samples))
+
+stop_timer(1)
+
+print_ln("Training complete.")
+print_ln("Final bias: %s", bias.reveal())
+
+print_ln("Model weights:")
+@for_range(n_features)
+def _(j):
+    print_ln("w[%s] = %s", j, beta[j].reveal())
+
+print_ln("Evaluating...")
+start_timer(2)
+
+TP = sint(0)
+TN = sint(0)
+FP = sint(0)
+FN = sint(0)
+
+# Print a small probability sample to inspect model separation.
+@for_range(5)
+def _(i):
+    z = bias
+    for j in range(n_features):
+        z = z + beta[j] * X[i][j]
+    print_ln("Prob %s = %s", i, ml.sigmoid(z).reveal())
+
+@for_range(total_samples)
+def _(i):
+    z = bias
+    for j in range(n_features):
+        z = z + beta[j] * X[i][j]
+
+    prob = ml.sigmoid(z)
+    pred = prob > decision_threshold
+    true = y[i]
+
+    TP.update(TP + pred * true)
+    TN.update(TN + (sint(1) - pred) * (sint(1) - true))
+    FP.update(FP + pred * (sint(1) - true))
+    FN.update(FN + (sint(1) - pred) * true)
+
+stop_timer(2)
+
+TPf = sfix(TP)
+TNf = sfix(TN)
+FPf = sfix(FP)
+FNf = sfix(FN)
+total = sfix(total_samples)
+eps = sfix(1e-6)
+
+accuracy = (TPf + TNf) / total
+precision = TPf / (TPf + FPf + eps)
+recall = TPf / (TPf + FNf + eps)
+f1 = sfix(2) * precision * recall / (precision + recall + eps)
+
+print_ln("----- CONFUSION MATRIX -----")
+print_ln(
+    "TP=%s TN=%s FP=%s FN=%s",
+    TP.reveal(),
+    TN.reveal(),
+    FP.reveal(),
+    FN.reveal()
+)
+
+print_ln("----- METRICS -----")
+print_ln("Accuracy  : %s", accuracy.reveal())
+print_ln("Precision : %s", precision.reveal())
+print_ln("Recall    : %s", recall.reveal())
+print_ln("F1 Score  : %s", f1.reveal())
+
+print_ln("----------------------------")
+print_ln("Training time  : see 'Time 1'")
+print_ln("Evaluation time: see 'Time 2'")
+print_ln("Communication  : see footer")
