@@ -48,28 +48,27 @@ Each party contributes 800 patient records. The secure logistic regression model
 
 Install the required Python packages:
 
-
-pip install pandas numpy scikit-learn
+    pip install pandas numpy scikit-learn
 
 
 ### MP-SPDZ
 
 Clone MP-SPDZ from GitHub:
 
-git clone https://github.com/data61/MP-SPDZ.git
-cd MP-SPDZ
+    git clone https://github.com/data61/MP-SPDZ.git
+    cd MP-SPDZ
 
 Follow the official MP-SPDZ installation instructions for your operating system.
 
 On Linux, the quick setup can usually be started with:
 
-Scripts/tldr.sh
+    Scripts/tldr.sh
 
 ## Dataset setup
 
 Download the UCI Myocardial Infarction Complications dataset and place the CSV file at:
 
-dataset_mpc/myocardial_infarction.csv
+    dataset_mpc/myocardial_infarction.csv
 
 
 The expected structure is:
@@ -92,13 +91,13 @@ MP-SPDZ/
 Place the MP-SPDZ program here:
 
 
-MP-SPDZ/Programs/Source/horizontal_lr_anomaly.mpc
+    MP-SPDZ/Programs/Source/horizontal_lr_anomaly.mpc
 
 
 Place the preprocessing script in the root of the MP-SPDZ folder:
 
 
-MP-SPDZ/preprocess.py
+    MP-SPDZ/preprocess.py
 
 
 ### 2. Run preprocessing
@@ -106,14 +105,13 @@ MP-SPDZ/preprocess.py
 From the root of the MP-SPDZ folder, run:
 
 
-python3 preprocess.py
+    python3 preprocess.py
 
 
 This creates the MP-SPDZ input files:
 
-
-Player-Data/Input-P0-0
-Player-Data/Input-P1-0
+    Player-Data/Input-P0-0
+    Player-Data/Input-P1-0
 
 
 The input order is important. For each sample, the preprocessing script writes all feature values first, followed by the label. This matches the input order used in `horizontal_lr_anomaly.mpc`.
@@ -187,7 +185,16 @@ This project uses MP-SPDZ. If you use MP-SPDZ, please cite the official MP-SPDZ 
         doi = {10.1145/3372297.3417872},
         url = {https://doi.org/10.1145/3372297.3417872}
     }
-    
+
+If you use the dataset, please cite the UCI dataset:
+
+    @misc{myocardial_infarction_complications_579,
+        title = {Myocardial infarction complications},
+        year = {2020},
+        howpublished = {UCI Machine Learning Repository},
+        doi = {10.24432/C53P5M},
+        url = {https://doi.org/10.24432/C53P5M}
+    }
 ## License
 
 This project is released under the MIT License. See the `LICENSE` file for details.
